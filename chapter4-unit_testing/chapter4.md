@@ -4,6 +4,7 @@
 - 실패와 에러를 구분하는 방법: 어써션에서 파생된 예외일 경우 실패, 나머지 예외는 에러.
 
 ```js
+// dry-run.js
 const main = () => {
   HopeTests.forEach(([message, test]) => {
     try {
