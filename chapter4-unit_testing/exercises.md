@@ -350,3 +350,265 @@ const mockReadFileSync = (filename, encoding = 'utf-8') => {
   return fs.readFileSync(filename, encoding)
 }
 ```
+
+
+## Setup and teardown
+> Testing frameworks often allow programmers to specify a setup function that is to be run before each test and a corresponding teardown function that is to be run after each test. 
+> (setup usually re-creates complicated test fixtures, while teardown functions are sometimes needed to clean up after tests, 
+> e.g., to close database connections or delete temporary files.)
+> Modify the testing framework in this chapter so that if a file of tests contains something like this:
+> ``` js
+> const createFixtures = () => {
+>   ...do something...
+> }
+>
+> hope.setup(createFixtures)
+> ```
+> then the function createFixtures will be called exactly once before each test in that file. Add a similar way to register a teardown function with hope.teardown.
+
+```js
+class Hope {
+  constructor() {
+    this.todo = [];
+    this.passes = [];
+    this.fails = [];
+    this.errors = [];
+    this._setup = null;
+    this._teardown = null;
+  }
+  
+  setup(fn) {
+    this._setup = fn;
+  }
+  
+  teardown(fn) {
+    this._teardown = fn;
+  }
+
+  run() {
+    this.tests.forEach(({ name, callback }) => {
+      try {
+        if (this._setup) {
+          this._setup();
+        }
+
+        callback();
+
+        if (this._teardown) {
+          this._teardown();
+        }
+      } catch (e) {
+        // ...
+      }
+    });
+  }
+};
+
+const createFixtures = () => {
+  console.log('Setting up test fixtures');
+  // ...
+};
+
+const cleanupFixtures = () => {
+  console.log('Cleaning up test fixtures');
+  // ...
+};
+
+hope.setup(createFixtures);
+hope.teardown(cleanupFixtures);
+
+
+hope.test('Test something', () => {
+  // ...
+});
+
+hope.test('Test something else', () => {
+  // ...
+});
+```
+
+
+## Multiple tests
+> Add a method hope.multiTest that allows users to specify multiple test cases for a function at once. For example, this:
+> 
+> ```js
+> hope.multiTest('check all of these', functionToTest, [
+> [['arg1a', 'arg1b'], 'result1'],
+> [['arg2a', 'arg2b'], 'result2'],
+> [['arg3a', 'arg3b'], 'result3'],
+> ])
+> ```
+> should be equivalent to this:
+> 
+> ```js
+> hope.test('check all of these 0',
+> () => assert(functionToTest('arg1a', 'arg1b') === 'result1')
+> )
+> hope.test('check all of these 1',
+> () => assert(functionToTest('arg2a', 'arg2b') === 'result2')
+> )
+> hope.test('check all of these 2',
+> () => assert(functionToTest('arg3a', 'arg3b') === 'result3')
+> )
+> ```
+
+```js
+hope.multiTest = function(description, functionToTest, testCases) {
+  testCases.forEach((testCase, index) => {
+    const [args, expectedResult] = testCase;
+    hope.test(`${description} ${index}`, () => {
+      const actualResult = functionToTest(...args);
+      assert(actualResult === expectedResult);
+    });
+  });
+};
+```
+
+
+## Assertions for sets and maps
+
+> 1. Write functions `assertSetEqual` and `assertMapEqual` that check whether two instances of Set or two instances of Map are equal.
+
+```js
+function assertSetEqual(actual, expected, message = '') {
+  // Check types
+  if (!(actual instanceof Set)) {
+    throw new Error(`${message} actual is not a Set: ${actual}`);
+  }
+  if (!(expected instanceof Set)) {
+    throw new Error(`${message} expected is not a Set: ${expected}`);
+  }
+  
+  if (actual.size !== expected.size) {
+    throw new Error(`${message} Set size mismatch: ${actual.size} !== ${expected.size}`);
+  }
+  
+  for (const element of actual) {
+    if (!expected.has(element)) {
+      throw new Error(`${message} Element ${element} found in actual but missing in expected`);
+    }
+  }
+  
+  return true;
+}
+
+function assertMapEqual(actual, expected, message = '') {
+  if (!(actual instanceof Map)) {
+    throw new Error(`${message} actual is not a Map: ${actual}`);
+  }
+  if (!(expected instanceof Map)) {
+    throw new Error(`${message} expected is not a Map: ${expected}`);
+  }
+  
+  if (actual.size !== expected.size) {
+    throw new Error(`${message} Map size mismatch: ${actual.size} !== ${expected.size}`);
+  }
+  
+  for (const [key, value] of actual) {
+    if (!expected.has(key)) {
+      throw new Error(`${message} Key ${key} found in actual but missing in expected`);
+    }
+    
+    const expectedValue = expected.get(key);
+    
+    if (value === null || expectedValue === null ||
+      typeof value !== 'object' || typeof expectedValue !== 'object') {
+      // For primitive values
+      if (value !== expectedValue) {
+        throw new Error(`${message} Value mismatch for key ${key}: ${value} !== ${expectedValue}`);
+      }
+    } else {
+      // For objects
+      const valueStr = JSON.stringify(value);
+      const expectedValueStr = JSON.stringify(expectedValue);
+
+      if (valueStr !== expectedValueStr) {
+        throw new Error(`${message} Value mismatch for key ${key}`);
+      }
+    }
+  }
+  
+  return true;
+}
+```
+
+> 2. Write a function `assertArraySame` that checks whether two arrays have the same elements, even if those elements are in different orders.
+
+```js
+function assertArraySame(actual, expected, message = '') {
+  if (!Array.isArray(actual)) {
+    throw new Error(`${message} actual is not an Array: ${actual}`);
+  }
+  if (!Array.isArray(expected)) {
+    throw new Error(`${message} expected is not an Array: ${expected}`);
+  }
+
+  if (actual.length !== expected.length) {
+    throw new Error(`${message} Array length mismatch: ${actual.length} !== ${expected.length}`);
+  }
+
+  const actualCounts = new Map();
+  const expectedCounts = new Map();
+
+  for (const item of actual) {
+    const key = typeof item === 'object' && item !== null
+      ? JSON.stringify(item)
+      : String(item);
+
+    const count = actualCounts.get(key) || 0;
+    actualCounts.set(key, count + 1);
+  }
+
+  for (const item of expected) {
+    const key = typeof item === 'object' && item !== null
+      ? JSON.stringify(item)
+      : String(item);
+
+    const count = expectedCounts.get(key) || 0;
+    expectedCounts.set(key, count + 1);
+  }
+
+  // Compare frequency maps
+  try {
+    assertMapEqual(actualCounts, expectedCounts, message);
+    return true;
+  } catch (error) {
+    throw new Error(`${message} Arrays don't contain the same elements: ${error.message}`);
+  }
+}
+```
+
+## Testing promises
+> Modify the unit testing framework to handle async functions, so that:
+> ```js
+> hope.test('delayed test', async () => {
+>            //...
+>          })
+> ```
+> does the right thing. (Note that you can use typeof to determine whether the object given to hope.test is a function or a promise.)
+
+```js
+class Hope {
+  // ...
+  async run() {
+    for (const [comment, test] of this.todo) {
+      try {
+        const result = test();
+        if (result instanceof Promise || typeof result?.then === 'function') { // thenable: https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Promise#thenables
+          await result;
+          this.passes.push(comment);
+        } else {
+          // Handle synchronous test
+          this.passes.push(comment);
+        }
+      } catch (e) {
+        if (e instanceof assert.AssertionError) {
+          this.fails.push(comment);
+        } else {
+          this.errors.push(comment);
+        }
+      }
+    }
+  }
+}
+```
