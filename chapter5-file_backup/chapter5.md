@@ -1,5 +1,15 @@
 # 파일 백업
 
+### Deprecated / Outdated 요소 by chatGPT
+- SHA‑1 사용
+  - 현재 SHA-1은 보안 취약성이 논의되며, 충돌 문제 최소화 목적이라면 SHA‑256 또는 BLAKE‑2 계열 해시 사용 권장.
+- fs-extra-promise, glob-promise 사용
+  - fs-extra-promise는 유지보수 종료 상태이며, Node.js는 자체 fs.promises가 존재.
+  - glob-promise도 최신 glob@8+ 버전에서 import {glob} from 'glob' 방식으로 Promise 지원.
+- Promise 체인 패턴
+  - new Promise(...) 내부에서 또 .then() 체인을 작성하는 패턴은 가독성과 에러 관리 측면에서 구식.
+  - 최신 방식은 async/await를 통한 직관적인 흐름 제어가 좀 더 권장됨.
+
 ### 파일을 어떻게 고유하게 식별할 수 있을까요?
 - 파일에 동일한 데이터가 포함되어 있는지 구분할 수 있는 방법이 필요하다.
   - 임의 데이터를 고정 길이 비트 문자열로 변환하는 해시 함수 사용(정확성 + 속도 빠름)
