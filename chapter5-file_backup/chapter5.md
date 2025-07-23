@@ -10,6 +10,12 @@
   - new Promise(...) 내부에서 또 .then() 체인을 작성하는 패턴은 가독성과 에러 관리 측면에서 구식.
   - 최신 방식은 async/await를 통한 직관적인 흐름 제어가 좀 더 권장됨.
 
+### 1프론트 API
+- https://developer.mozilla.org/en-US/docs/Web/API/Blob/stream
+  - File 객체에서도 Readable API 제공
+- https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest
+  - 데이터를 암호학적으로 안전한 방식으로 해시(digest)하여 고정 길이의 식별자(지문)를 만드는 API
+
 ### 파일을 어떻게 고유하게 식별할 수 있을까요?
 - 파일에 동일한 데이터가 포함되어 있는지 구분할 수 있는 방법이 필요하다.
   - 임의 데이터를 고정 길이 비트 문자열로 변환하는 해시 함수 사용(정확성 + 속도 빠름)
