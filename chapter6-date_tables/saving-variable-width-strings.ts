@@ -46,4 +46,41 @@ export function encodeStrings(strings: string[]): ArrayBuffer {
 
 // 2. 이러한 ArrayBuffer를 받아 원본 텍스트가 포함된 배열을 반환하는 다른 함수를 작성합니다.
 
+/** (length, text) 직렬화 버퍼를 원래 문자열 배열로 복원 */
+export function decodeStrings(buffer: ArrayBuffer): string[] {
+    const viewForHeader = new DataView(buffer);       // 헤더용: 다양한 숫자 타입 읽기 (uint32, etc.)
+    const viewForContent = new Uint8Array(buffer);    // 본문용: 바이트 배열 그대로 슬라이스/복사
+    const result: string[] = [];
+
+    let cursor = 0;
+    const bufferEnd = viewForContent.byteLength;
+
+    while (cursor < bufferEnd) {
+        // 헤더(4바이트) 존재 여부 체크
+        if (cursor + HEADER_SIZE > bufferEnd) {
+            throw new RangeError("Truncated buffer: missing length header");
+        }
+
+        // 헤더에서 본문 크기 읽어오기
+        const bytesLength = viewForHeader.getUint32(cursor,true);
+        cursor += HEADER_SIZE;
+
+        // 본문 범위 체크
+        const contentEnd = cursor + bytesLength;
+        if (contentEnd > bufferEnd) {
+            throw new RangeError("Truncated buffer: missing string bytes");
+        }
+
+        // 본문 디코드 (subarray: 원본 복사 없이 지정한 만큼 읽어옴)
+        const contentSlice = viewForContent.subarray(cursor, contentEnd);
+        const decodedString = decoder.decode(contentSlice);
+        result.push(decodedString);
+
+        // 다음 레코드로 이동
+        cursor = contentEnd;
+    }
+
+    return result;
+}
+
 // 3. Mocha로 테스트를 작성해서 함수가 올바르게 작동하는지 확인합니다.
