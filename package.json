@@ -4,12 +4,18 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "mocha --recursive"
+    "test": "mocha --loader=ts-node/esm \"test/**/*.ts\""
   },
   "private": true,
   "type": "module",
   "devDependencies": {
+    "@types/mocha": "^10.0.10",
     "mocha": "^11.7.1",
-    "mock-fs": "^5.5.0"
+    "mock-fs": "^5.5.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "@types/node": "^24.3.0"
   }
 }
